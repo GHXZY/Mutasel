@@ -34,7 +34,9 @@ import { bridge, desktop } from "./services/bridge";
 import { Classroom, type Snapshot } from "./services/classroom";
 import { VideoPreview } from "./components/VideoPreview";
 import { SettingsPanel } from "./components/SettingsPanel";
+import { SessionConnection } from "./components/SessionConnection";
 import mutaselLogo from "./assets/mutasel.svg";
+import { version } from "../../../package.json";
 const labels = {
   INITIALIZING: "Menyiapkan perangkat",
   SEARCHING: "Menunggu ruang kelas",
@@ -56,7 +58,9 @@ export default function App() {
   const [state, setState] = useState<Snapshot>();
   const [page, setPage] = useState("Kelas");
   const [modal, setModal] = useState(false);
-  const [presentation, setPresentation] = useState(false);
+  const [videoFullscreen, setVideoFullscreen] = useState(false);
+  const [sharingBusy, setSharingBusy] = useState(false);
+  const videoStage = useRef<HTMLDivElement>(null);
   const [speaker, setSpeaker] = useState(true);
   const [mic, setMic] = useState(true);
   const [camera, setCamera] = useState(true);
@@ -67,6 +71,23 @@ export default function App() {
     window.scrollTo(0, 0);
   }, [settings.role, page]);
   const session = useRef<Classroom | null>(null);
+  useEffect(() => {
+    const update = () =>
+      setVideoFullscreen(
+        !!document.fullscreenElement &&
+          document.fullscreenElement === videoStage.current,
+      );
+    document.addEventListener("fullscreenchange", update);
+    return () => document.removeEventListener("fullscreenchange", update);
+  }, []);
+  useEffect(() => {
+    if (!modal) return;
+    const timer = setInterval(
+      () => setLevel(session.current?.devices.level() ?? 0),
+      120,
+    );
+    return () => clearInterval(timer);
+  }, [modal]);
   useEffect(() => {
     void bridge
       .getSettings()
@@ -97,12 +118,11 @@ export default function App() {
     if (!loaded || !settings.role) return;
     const s = new Classroom(settings, setState);
     session.current = s;
-    if (settings.autoConnect && desktop) void s.start();
+    if (settings.autoConnect && desktop && settings.role === "TEACHER")
+      void s.start();
     else setState({ ...s.state, connection: "DISCONNECTED" });
-    const timer = setInterval(() => setLevel(s.devices.level()), 120);
     void bridge.getNetwork().then(setNetwork);
     return () => {
-      clearInterval(timer);
       s.stop();
     };
   }, [loaded, settings.role]);
@@ -131,7 +151,7 @@ export default function App() {
   };
   const selectRole = async (role: Settings["role"]) => {
     try {
-      await save({ ...settings, role });
+      await save({ ...settings, role, networkCode: "", sessionCode: "" });
     } catch {
       setError(
         "Peran tidak dapat dimulai. Port mungkin digunakan aplikasi lain.",
@@ -139,6 +159,54 @@ export default function App() {
     }
   };
   const connected = state?.connection === "CONNECTED";
+  const goHome = async () => {
+    session.current?.stop();
+    setModal(false);
+    if (document.fullscreenElement) await document.exitFullscreen();
+    setPage("Kelas");
+    setMic(true);
+    setCamera(true);
+    await selectRole(null);
+  };
+  const toggleVideoFullscreen = async () => {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await videoStage.current?.requestFullscreen();
+    } catch {
+      setError(
+        "Layar penuh tidak dapat dibuka. Coba kembali melalui tombol pada tayangan.",
+      );
+    }
+  };
+  const togglePresentation = async () => {
+    setSharingBusy(true);
+    try {
+      if (state?.presenting) await session.current?.stopPresentation();
+      else await session.current?.startPresentation();
+    } catch {
+      setError("Presentasi belum dapat diubah. Coba hubungkan ulang.");
+    } finally {
+      setSharingBusy(false);
+    }
+  };
+  const changeVolume = (value: number) => {
+    setSpeaker(true);
+    setSettings((s) => ({ ...s, outputVolume: value }));
+    if (session.current)
+      session.current.settings = {
+        ...session.current.settings,
+        outputVolume: value,
+      };
+  };
+  const persistVolume = () => {
+    void bridge
+      .saveSettings(settings)
+      .catch(() =>
+        setError(
+          "Volume berubah, tetapi belum dapat disimpan. Coba simpan melalui Pengaturan.",
+        ),
+      );
+  };
   const teacher = settings.role === "TEACHER";
   const permission = state?.permission ?? "MUTED";
   const connect = () => {
@@ -153,7 +221,7 @@ export default function App() {
   };
   if (!loaded) return <div className="loading">Menyiapkan Mutasel…</div>;
   return (
-    <div className={`app ${presentation ? "presentation" : ""}`}>
+    <div className="app">
       <header className="topbar">
         <div className="brand">
           <img className="brand-mark" src={mutaselLogo} alt="Logo Mutasel" />
@@ -162,10 +230,16 @@ export default function App() {
           </div>
         </div>
         <div className="topbar-right">
+          {settings.role && (
+            <button className="home-button" onClick={() => void goHome()}>
+              <ArrowLeft size={17} />
+              Kembali ke beranda
+            </button>
+          )}
           <span className="local-pill">
             <ShieldCheck size={15} /> Jaringan lokal saja
           </span>
-          <span className="version">v1.0.0</span>
+          <span className="version">v{version}</span>
           <button
             className="icon-button"
             aria-label="Ganti tema"
@@ -318,6 +392,20 @@ export default function App() {
             </div>
           </aside>
           <main className="main-content">
+            {page === "Kelas" && (
+              <SessionConnection
+                key={settings.role}
+                teacher={teacher}
+                network={network}
+                settings={settings}
+                onJoin={async (networkCode, sessionCode) => {
+                  await save({ ...settings, networkCode, sessionCode });
+                  setError("");
+                  session.current?.stop();
+                  await session.current?.start();
+                }}
+              />
+            )}
             <div className="page-heading">
               <div>
                 <div className="breadcrumb">
@@ -378,7 +466,7 @@ export default function App() {
                         {teacher ? "HANYA PRATINJAU" : "SIARAN KELAS"}
                       </span>
                     </div>
-                    <div className="video-stage">
+                    <div className="video-stage" ref={videoStage}>
                       <VideoPreview
                         stream={
                           teacher
@@ -388,7 +476,8 @@ export default function App() {
                         local={teacher}
                         visible={
                           teacher
-                            ? camera && !!state?.local?.getVideoTracks().length
+                            ? !!(camera || state?.presenting) &&
+                              !!state?.local?.getVideoTracks().length
                             : connected &&
                               !!state?.remote?.getVideoTracks().length &&
                               state.peerCamera
@@ -400,12 +489,23 @@ export default function App() {
                         <span
                           className={connected ? "green-dot" : "gray-dot"}
                         />
-                        {teacher ? "Kamera Anda" : "Ruang guru"}
+                        {teacher
+                          ? state?.presenting
+                            ? "Presentasi layar komputer"
+                            : "Kamera Anda"
+                          : "Ruang guru"}
                       </span>
                       <button
                         className="stage-fullscreen"
-                        aria-label="Layar penuh"
-                        onClick={() => void bridge.fullscreen()}
+                        aria-label={
+                          videoFullscreen ? "Keluar layar penuh" : "Layar penuh"
+                        }
+                        title={
+                          videoFullscreen
+                            ? "Keluar layar penuh (Esc)"
+                            : "Layar penuh"
+                        }
+                        onClick={() => void toggleVideoFullscreen()}
                       >
                         <Maximize size={18} />
                       </button>
@@ -641,32 +741,59 @@ export default function App() {
                         </button>
                       </>
                     )}
-                    <button
-                      className="control"
-                      onClick={() => setSpeaker((s) => !s)}
-                    >
-                      {speaker ? <Volume2 size={22} /> : <VolumeX size={22} />}
-                      <span>
-                        Speaker
-                        <small>
-                          {speaker ? `${settings.outputVolume}%` : "Nonaktif"}
-                        </small>
-                      </span>
-                    </button>
+                    <div className="speaker-control">
+                      <button
+                        className="control"
+                        onClick={() => setSpeaker((s) => !s)}
+                      >
+                        {speaker ? (
+                          <Volume2 size={22} />
+                        ) : (
+                          <VolumeX size={22} />
+                        )}
+                        <span>
+                          Speaker
+                          <small>
+                            {speaker ? `${settings.outputVolume}%` : "Nonaktif"}
+                          </small>
+                        </span>
+                      </button>
+                      <input
+                        aria-label="Volume speaker"
+                        type="range"
+                        min="0"
+                        max="100"
+                        value={settings.outputVolume}
+                        onChange={(e) => changeVolume(+e.target.value)}
+                        onPointerUp={persistVolume}
+                        onKeyUp={persistVolume}
+                      />
+                    </div>
                     <span className="control-divider" />
                     <button className="control" onClick={() => setModal(true)}>
                       <Settings2 size={21} />
                       <span>Perangkat</span>
                     </button>
-                    <button
-                      className="control"
-                      onClick={() => setPresentation((s) => !s)}
-                    >
-                      <Maximize size={21} />
-                      <span>
-                        {presentation ? "Tampilan biasa" : "Mode presentasi"}
-                      </span>
-                    </button>
+                    {teacher && (
+                      <button
+                        className="control"
+                        disabled={
+                          sharingBusy ||
+                          !state?.local ||
+                          state?.connection === "DISCONNECTED"
+                        }
+                        onClick={() => void togglePresentation()}
+                      >
+                        <Monitor size={21} />
+                        <span>
+                          {sharingBusy
+                            ? "Memilih layar…"
+                            : state?.presenting
+                              ? "Hentikan presentasi"
+                              : "Mode presentasi"}
+                        </span>
+                      </button>
+                    )}
                   </div>
                   {state?.ws === "open" ? (
                     <button
@@ -768,8 +895,8 @@ export default function App() {
                   Pastikan aplikasi guru aktif. Nonaktifkan isolasi klien Wi-Fi
                   dan periksa VLAN bersama pengelola jaringan. Izinkan aplikasi
                   pada Windows Firewall untuk jaringan Private, termasuk media
-                  UDP. Jika pencarian gagal, isi alamat IP guru melalui
-                  Pengaturan → Jaringan.
+                  UDP. Salin kode jaringan dan kode unik terbaru dari ruang
+                  guru, lalu gunakan Sambungkan dengan kode pada halaman Kelas.
                 </p>
                 <h3>Suara bergema atau tidak terdengar?</h3>
                 <p>
@@ -792,21 +919,8 @@ export default function App() {
           level={level}
           onSave={save}
           onClose={() => setModal(false)}
-          onRole={() => {
-            session.current?.stop();
-            setModal(false);
-            void selectRole(null);
-          }}
+          onRole={() => void goHome()}
         />
-      )}
-      {presentation && (
-        <button
-          className="presentation-exit secondary"
-          onClick={() => setPresentation(false)}
-        >
-          <ArrowLeft size={16} />
-          Keluar presentasi
-        </button>
       )}
     </div>
   );

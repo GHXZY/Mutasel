@@ -1,7 +1,10 @@
 import Fastify from "fastify";
 import { WebSocketServer, WebSocket } from "ws";
+import { randomBytes } from "node:crypto";
+import { networkInterfaces } from "node:os";
 import {
   messageSchema,
+  networkCode,
   type Role,
   type Permission,
   type ServerMessage,
@@ -13,6 +16,7 @@ export async function startServer(
 ) {
   const app = Fastify({ logger: false });
   const peers = new Map<Role, WebSocket>();
+  const sessionCode = randomBytes(6).toString("hex").toUpperCase();
   let permission: Permission = "MUTED";
   const send = (ws: WebSocket | undefined, msg: ServerMessage) => {
     if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
@@ -70,6 +74,27 @@ export async function startServer(
       }
       const m = parsed.data;
       if (m.type === "REGISTER") {
+        const port = (app.server.address() as { port: number }).port;
+        const validCodes = Object.values(networkInterfaces()).flatMap(
+          (entries) =>
+            (entries ?? [])
+              .filter((entry) => entry.family === "IPv4")
+              .map((entry) => networkCode(entry.address, port)),
+        );
+        validCodes.push(networkCode("127.0.0.1", port));
+        if (
+          m.role === "STUDENT" &&
+          (m.sessionCode !== sessionCode ||
+            !validCodes.includes(m.networkCode ?? ""))
+        ) {
+          send(ws, {
+            type: "ERROR",
+            message:
+              "Kode unik atau kode jaringan tidak cocok. Masukkan kode sesi yang sedang tampil di ruang guru.",
+          });
+          ws.close(1008);
+          return;
+        }
         const local = ["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(
           req.socket.remoteAddress ?? "",
         );
@@ -164,6 +189,7 @@ export async function startServer(
     throw error;
   }
   return {
+    sessionCode,
     port: (app.server.address() as { port: number }).port,
     close: async () => {
       clearInterval(heartbeat);

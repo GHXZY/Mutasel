@@ -31,6 +31,63 @@
   flex-direction: column;
   gap: 12px;
 }
+.session-connection {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 14px;
+  padding: 18px;
+  margin-bottom: 22px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--base);
+}
+.session-connection > div:first-child {
+  flex: 1 1 100%;
+}
+.session-connection p {
+  margin: 5px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.session-connection label {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 12px;
+  flex: 1 1 190px;
+}
+.session-connection input {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+}
+.session-connection code {
+  display: block;
+  font-size: 18px;
+  letter-spacing: 1px;
+  color: var(--accent);
+  user-select: all;
+  overflow-wrap: anywhere;
+}
+.session-connection small {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+}
+.network-codes {
+  flex: 2 1 240px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+}
+.network-codes > strong {
+  flex-basis: 100%;
+  font-size: 12px;
+}
 .test-video {
   width: 100%;
   max-height: 200px;
@@ -489,6 +546,7 @@ button.secondary:hover:not(:disabled) {
   font-size: 10px;
 }
 .stage-fullscreen {
+  z-index: 5;
   position: absolute;
   bottom: 16px;
   right: 16px;
@@ -500,6 +558,9 @@ button.secondary:hover:not(:disabled) {
   height: 32px;
 }
 .remote-audio {
+  position: absolute;
+  pointer-events: none;
+  visibility: hidden;
   width: 0;
   height: 0;
   overflow: hidden;
@@ -1056,38 +1117,6 @@ button.secondary:hover:not(:disabled) {
 .guide h3 {
   margin-top: 25px;
 }
-.presentation .sidebar,
-.presentation .page-heading,
-.presentation .topbar,
-.presentation .classroom-side,
-.presentation .classroom-footnote {
-  display: none;
-}
-.presentation .shell {
-  min-height: 100vh;
-}
-.presentation .main-content {
-  padding: 12px;
-}
-.presentation .classroom-grid {
-  display: block;
-}
-.presentation .video-stage {
-  height: calc(100vh - 165px);
-  aspect-ratio: auto;
-}
-.presentation .video-caption {
-  display: none;
-}
-.presentation .controls-panel {
-  margin-top: 10px;
-}
-.presentation-exit {
-  position: fixed;
-  right: 25px;
-  top: 22px;
-  z-index: 20;
-}
 .loading {
   display: grid;
   place-items: center;
@@ -1393,4 +1422,33 @@ button.secondary:hover:not(:disabled) {
   .classroom-footnote {
     margin-top: 10px;
   }
+}
+.video-stage:fullscreen {
+  width: 100vw;
+  height: 100vh !important;
+  max-height: none;
+  margin: 0;
+  border-radius: 0;
+  aspect-ratio: auto;
+}
+.home-button {
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--accent);
+  min-height: 40px;
+  padding: 8px 12px;
+  font-size: 11px;
+}
+.speaker-control {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  min-width: 100px;
+}
+.speaker-control input {
+  width: 100px;
+  height: 16px;
+  accent-color: #499a13;
+  cursor: pointer;
 }

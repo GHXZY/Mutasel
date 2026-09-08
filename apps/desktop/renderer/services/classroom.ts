@@ -8,8 +8,12 @@ import type {
 } from "../../../../packages/shared/protocol";
 import { bridge } from "./bridge";
 import { DeviceManager } from "./media";
-import { serverMessageSchema } from "../../../../packages/shared/protocol";
+import {
+  serverMessageSchema,
+  parseNetworkCode,
+} from "../../../../packages/shared/protocol";
 export interface Snapshot {
+  presenting: boolean;
   connection: Connection;
   permission: Permission;
   local: MediaStream | null;
@@ -24,6 +28,7 @@ export interface Snapshot {
   logs: string[];
 }
 const initial: Snapshot = {
+  presenting: false,
   connection: "INITIALIZING",
   permission: "MUTED",
   local: null,
@@ -52,6 +57,82 @@ export class Classroom {
   private candidates: RTCIceCandidateInit[] = [];
   private audioSender: RTCRtpSender | null = null;
   private videoSender: RTCRtpSender | null = null;
+  private display: MediaStream | null = null;
+  private displayBusy = false;
+  private previewStream() {
+    return new MediaStream([
+      ...this.devices.stream.getAudioTracks(),
+      ...(this.display ?? this.devices.stream).getVideoTracks(),
+    ]);
+  }
+  async startPresentation() {
+    if (
+      this.role !== "TEACHER" ||
+      this.stopped ||
+      this.displayBusy ||
+      this.display
+    )
+      return;
+    this.displayBusy = true;
+    const generation = this.generation;
+    let captured: MediaStream | null = null;
+    try {
+      captured = await navigator.mediaDevices.getDisplayMedia({
+        audio: false,
+        video: {
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          frameRate: { ideal: 15, max: 24 },
+        },
+      });
+      if (this.stopped || generation !== this.generation) {
+        captured.getTracks().forEach((t) => t.stop());
+        return;
+      }
+      const track = captured.getVideoTracks()[0];
+      track.contentHint = "detail";
+      await this.videoSender?.replaceTrack(track);
+      if (this.stopped || generation !== this.generation) {
+        captured.getTracks().forEach((t) => t.stop());
+        return;
+      }
+      this.display = captured;
+      track.onended = () => {
+        void this.stopPresentation().catch(() =>
+          this.error("Kamera belum dapat dipulihkan. Hubungkan ulang kelas."),
+        );
+      };
+      this.emit({ presenting: true, local: this.previewStream() });
+      this.publishMedia();
+      this.log("Presentasi layar dimulai");
+    } catch (error) {
+      captured?.getTracks().forEach((t) => t.stop());
+      if (!(error instanceof DOMException && error.name === "NotAllowedError"))
+        this.error(
+          "Layar tidak dapat dibagikan. Coba kembali dan pilih layar komputer.",
+        );
+    } finally {
+      this.displayBusy = false;
+    }
+  }
+  async stopPresentation() {
+    const display = this.display;
+    if (!display) return;
+    this.display = null;
+    display.getTracks().forEach((t) => {
+      t.onended = null;
+      t.stop();
+    });
+    this.emit({
+      presenting: false,
+      local: this.stopped ? null : this.devices.stream,
+    });
+    await this.videoSender?.replaceTrack(
+      this.devices.stream.getVideoTracks()[0] ?? null,
+    );
+    this.publishMedia();
+    this.log("Presentasi berakhir; kembali ke kamera");
+  }
   mic = true;
   camera = true;
   private replacing = false;
@@ -76,6 +157,18 @@ export class Classroom {
     return this.settings.role ?? "STUDENT";
   }
   async start() {
+    if (
+      this.role === "STUDENT" &&
+      (!parseNetworkCode(this.settings.networkCode) ||
+        !/^[A-F0-9]{12}$/.test(this.settings.sessionCode))
+    ) {
+      this.emit({
+        connection: "DISCONNECTED",
+        error:
+          "Masukkan kode jaringan dan kode unik dari ruang guru untuk menyambung.",
+      });
+      return;
+    }
     this.stopped = false;
     this.mic = true;
     this.camera = true;
@@ -125,8 +218,10 @@ export class Classroom {
       }
       this.applyMute();
       await this.audioSender?.replaceTrack(stream.getAudioTracks()[0] ?? null);
-      await this.videoSender?.replaceTrack(stream.getVideoTracks()[0] ?? null);
-      this.emit({ local: stream });
+      await this.videoSender?.replaceTrack(
+        (this.display ?? stream).getVideoTracks()[0] ?? null,
+      );
+      this.emit({ local: this.previewStream() });
       this.publishMedia();
     } finally {
       this.replacing = false;
@@ -136,22 +231,16 @@ export class Classroom {
     if (this.stopped) return;
     const generation = this.generation;
     this.emit({ connection: this.retry ? "RECONNECTING" : "SEARCHING" });
-    let address =
-      this.role === "TEACHER" ? "127.0.0.1" : this.settings.teacherAddress;
+    let address = "127.0.0.1";
     let port = this.settings.port;
-    if (!address) {
-      const found = await bridge.discover();
-      if (this.stopped || generation !== this.generation) return;
-      if (found[0]) {
-        address = found[0].address;
-        port = found[0].port;
-      } else {
-        this.error(
-          "Guru belum ditemukan. Pastikan kedua komputer di LAN yang sama, isolasi Wi-Fi nonaktif, dan aplikasi diizinkan Firewall.",
-        );
-        this.schedule();
+    if (this.role === "STUDENT") {
+      const target = parseNetworkCode(this.settings.networkCode);
+      if (!target) {
+        this.error("Kode jaringan tidak valid.");
         return;
       }
+      address = target.address;
+      port = target.port;
     }
     this.emit({
       address: `${address}:${port}`,
@@ -176,6 +265,8 @@ export class Classroom {
         role: this.role,
         protocolVersion: 1,
         token,
+        networkCode: this.settings.networkCode,
+        sessionCode: this.settings.sessionCode,
       });
       this.heartbeat = setInterval(() => {
         if (Date.now() - this.lastPong > 25000) ws.close();
@@ -300,7 +391,7 @@ export class Classroom {
     const remote = new MediaStream();
     this.emit({ remote });
     const audio = this.devices.stream.getAudioTracks()[0];
-    const video = this.devices.stream.getVideoTracks()[0];
+    const video = (this.display ?? this.devices.stream).getVideoTracks()[0];
     const transceiver = pc.addTransceiver(audio ?? "audio", {
       direction: "sendrecv",
       streams: [this.devices.stream],
@@ -438,8 +529,8 @@ export class Classroom {
             !!this.devices.stream.getAudioTracks().length,
       camera:
         this.role === "TEACHER" &&
-        this.camera &&
-        !!this.devices.stream.getVideoTracks().length,
+        (!!this.display ||
+          (this.camera && !!this.devices.stream.getVideoTracks().length)),
     });
   }
   private closePeer(clear = true) {
@@ -453,6 +544,11 @@ export class Classroom {
   }
   stop() {
     this.stopped = true;
+    this.display?.getTracks().forEach((t) => {
+      t.onended = null;
+      t.stop();
+    });
+    this.display = null;
     ++this.generation;
     clearTimeout(this.timer);
     clearInterval(this.heartbeat);
@@ -466,6 +562,7 @@ export class Classroom {
     this.closePeer();
     this.devices.close();
     this.emit({
+      presenting: false,
       connection: "DISCONNECTED",
       permission: "MUTED",
       local: null,

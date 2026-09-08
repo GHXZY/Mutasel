@@ -1,9 +1,9 @@
 import { useEffect, useState, useRef } from "react";
-import { X, Volume2, RefreshCw } from "lucide-react";
-import type { Settings, Discovery } from "../../../../packages/shared/protocol";
-import { bridge } from "../services/bridge";
+import { X, Volume2 } from "lucide-react";
+import type { Settings } from "../../../../packages/shared/protocol";
 import { speakerTest } from "../services/media";
 import { DeviceTests } from "./DeviceTests";
+import { version } from "../../../../package.json";
 export function SettingsPanel({
   settings,
   onSave,
@@ -22,7 +22,6 @@ export function SettingsPanel({
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
-  const [found, setFound] = useState<Discovery[]>([]);
   const panel = useRef<HTMLElement>(null);
   useEffect(() => {
     const previous = document.activeElement as HTMLElement;
@@ -197,64 +196,28 @@ export function SettingsPanel({
               <p className="muted">
                 Kedua komputer harus terhubung ke jaringan lokal yang sama.
               </p>
-              <label>
-                Alamat IP guru (opsional)
-                <input
-                  placeholder="192.168.1.10"
-                  value={draft.teacherAddress}
-                  onChange={(e) => set("teacherAddress", e.target.value)}
-                />
-              </label>
-              <label>
-                Port signaling
-                <input
-                  type="number"
-                  min="1024"
-                  max="65535"
-                  value={draft.port}
-                  onChange={(e) => set("port", +e.target.value)}
-                />
-              </label>
-              <button
-                className="secondary"
-                disabled={busy}
-                onClick={async () => {
-                  setBusy(true);
-                  try {
-                    const results = await bridge.discover();
-                    setFound(results);
-                    setMessage(
-                      results.length
-                        ? "Guru ditemukan. Pilih alamat di bawah."
-                        : "Guru belum ditemukan. Periksa LAN, isolasi Wi-Fi, dan Windows Firewall.",
-                    );
-                  } finally {
-                    setBusy(false);
-                  }
-                }}
-              >
-                <RefreshCw size={16} />{" "}
-                {busy ? "Mencari…" : "Cari perangkat guru"}
-              </button>
-              {found.map((d) => (
-                <button
-                  className="discovery-item"
-                  key={d.address}
-                  onClick={() =>
-                    setDraft((s) => ({
-                      ...s,
-                      teacherAddress: d.address,
-                      port: d.port,
-                    }))
-                  }
-                >
-                  {d.address}:{d.port} <span>{d.source}</span>
-                </button>
-              ))}
               <div className="note">
-                Biarkan alamat kosong untuk pencarian otomatis. Alamat manual
-                menjadi cadangan jika jaringan membatasi discovery.
+                Gunakan formulir Sambung dengan kode pada halaman Kelas.
+                Masukkan kode jaringan dan kode unik sesi yang ditampilkan oleh
+                ruang guru tujuan. Kode jaringan sudah memuat alamat dan port
+                guru.
               </div>
+              {settings.role === "TEACHER" && (
+                <label>
+                  Port jaringan guru
+                  <input
+                    type="number"
+                    min="1024"
+                    max="65535"
+                    value={draft.port}
+                    onChange={(e) => set("port", +e.target.value)}
+                  />
+                </label>
+              )}
+              <small className="muted">
+                Mengubah port guru akan mengakhiri sesi lama dan membuat kode
+                baru. Bagikan kembali kedua kode ke ruang kelas.
+              </small>
             </>
           )}
           {tab === "Umum" && (
@@ -302,7 +265,7 @@ export function SettingsPanel({
           {tab === "Tentang" && (
             <>
               <h3>Mutasel: Classroom Connector</h3>
-              <p>Versi 1.0.0 · Build 1</p>
+              <p>Versi {version}</p>
               <p className="muted">
                 Dua ruang, satu pembelajaran. Komunikasi langsung melalui
                 jaringan sekolah.

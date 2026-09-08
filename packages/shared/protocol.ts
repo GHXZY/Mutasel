@@ -1,4 +1,22 @@
 import { z } from "zod";
+export function networkCode(address: string, port: number) {
+  return `MS-${address
+    .split(".")
+    .map((n) => (+n).toString(16).padStart(2, "0"))
+    .join("")}-${port.toString(16).padStart(4, "0")}`.toUpperCase();
+}
+export function parseNetworkCode(value: string) {
+  const match = /^MS-([A-F0-9]{8})-([A-F0-9]{4})$/.exec(
+    value.trim().toUpperCase(),
+  );
+  if (!match) return null;
+  const address = match[1]
+    .match(/../g)!
+    .map((n) => parseInt(n, 16))
+    .join(".");
+  const port = parseInt(match[2], 16);
+  return privateHost(address) && port >= 1024 ? { address, port } : null;
+}
 export const roleSchema = z.enum(["TEACHER", "STUDENT"]);
 export type Role = z.infer<typeof roleSchema>;
 export type Permission = "MUTED" | "REQUESTING" | "APPROVED" | "REJECTED";
@@ -19,6 +37,8 @@ export const privateHost = (v: string) =>
 export const settingsSchema = z
   .object({
     role: roleSchema.nullable().default(null),
+    networkCode: z.string().max(16).default(""),
+    sessionCode: z.string().max(12).default(""),
     teacherAddress: z
       .string()
       .refine((v) => v === "" || privateHost(v))
@@ -44,6 +64,8 @@ export const messageSchema = z.discriminatedUnion("type", [
       role: roleSchema,
       protocolVersion: z.literal(1),
       token: z.string().max(128).optional(),
+      networkCode: z.string().max(16).optional(),
+      sessionCode: z.string().max(12).optional(),
     })
     .strict(),
   z.object({ type: z.literal("OFFER"), sdp: z.string().max(60000) }).strict(),
@@ -96,6 +118,7 @@ export const serverMessageSchema = z.union([
 ]);
 export type ServerMessage = z.infer<typeof serverMessageSchema>;
 export interface NetworkInfo {
+  sessionCode?: string;
   addresses: { name: string; address: string }[];
   serverRunning: boolean;
   port: number;

@@ -1,4 +1,11 @@
-import { app, BrowserWindow, ipcMain, session } from "electron";
+import {
+  app,
+  BrowserWindow,
+  ipcMain,
+  session,
+  desktopCapturer,
+  dialog,
+} from "electron";
 import { readFile, writeFile, mkdir, rename } from "node:fs/promises";
 import path from "node:path";
 import { randomBytes } from "node:crypto";
@@ -20,6 +27,7 @@ let server: Awaited<ReturnType<typeof startServer>> | undefined;
 let stopDiscovery: (() => void) | undefined;
 const teacherToken = randomBytes(32).toString("hex");
 let quitting = false;
+let settingsWrites: Promise<unknown> = Promise.resolve();
 const devUrl = process.env.VITE_DEV_SERVER_URL;
 // Keep the existing settings location across the product rename; ':' is not valid in Windows paths.
 app.setPath("userData", path.join(app.getPath("appData"), "local-classroom"));
@@ -79,14 +87,63 @@ else {
         callback(
           contents === win?.webContents &&
             trusted(contents.getURL()) &&
-            ["media", "speaker-selection"].includes(permission),
+            (["media", "speaker-selection", "fullscreen"].includes(
+              permission,
+            ) ||
+              (permission === "display-capture" &&
+                settings.role === "TEACHER")),
         ),
     );
     session.defaultSession.setPermissionCheckHandler(
       (contents, permission) =>
         contents === win?.webContents &&
         trusted(contents.getURL()) &&
-        ["media", "speaker-selection"].includes(permission),
+        (["media", "speaker-selection", "fullscreen"].includes(permission) ||
+          (permission === "display-capture" && settings.role === "TEACHER")),
+    );
+    session.defaultSession.setDisplayMediaRequestHandler(
+      (request, callback) => {
+        const allowed = () =>
+          settings.role === "TEACHER" &&
+          !!win &&
+          !win.isDestroyed() &&
+          request.frame === win.webContents.mainFrame &&
+          trusted(request.frame?.url ?? "") &&
+          request.videoRequested;
+        if (!allowed()) {
+          callback({});
+          return;
+        }
+        void (async () => {
+          const sources = await desktopCapturer.getSources({
+            types: ["screen"],
+            thumbnailSize: { width: 0, height: 0 },
+          });
+          if (!sources.length || !allowed()) {
+            callback({});
+            return;
+          }
+          const choice = await dialog.showMessageBox(win!, {
+            type: "question",
+            title: "Mode presentasi",
+            message:
+              "Pilih layar komputer yang ingin ditampilkan ke ruang siswa.",
+            detail:
+              "Tampilan layar dikirim langsung melalui LAN. Suara tetap menggunakan mikrofon Anda.",
+            buttons: [
+              "Batal",
+              ...sources.map(
+                (source, index) => `Layar ${index + 1} · ${source.name}`,
+              ),
+            ],
+            defaultId: 0,
+            cancelId: 0,
+            noLink: true,
+          });
+          const source = sources[choice.response - 1];
+          callback(allowed() && source ? { video: source } : {});
+        })().catch(() => callback({}));
+      },
     );
     session.defaultSession.webRequest.onBeforeRequest(
       { urls: ["http://*/*", "https://*/*", "ws://*/*", "wss://*/*"] },
@@ -110,20 +167,26 @@ else {
         return fn(arg);
       });
     handle("settings:get", () => settings);
-    handle("settings:save", async (value) => {
+    handle("settings:save", (value) => {
       const next = settingsSchema.parse(value);
-      await apply(next);
-      await mkdir(app.getPath("userData"), { recursive: true });
-      await writeFile(settingsPath() + ".tmp", JSON.stringify(next, null, 2));
-      await rename(settingsPath() + ".tmp", settingsPath());
-      if (app.isPackaged)
-        app.setLoginItemSettings({ openAtLogin: next.autoStart });
-      return settings;
+      const write = settingsWrites.then(async () => {
+        await apply(next);
+        await mkdir(app.getPath("userData"), { recursive: true });
+        await writeFile(settingsPath() + ".tmp", JSON.stringify(next, null, 2));
+        await rename(settingsPath() + ".tmp", settingsPath());
+        if (app.isPackaged)
+          app.setLoginItemSettings({ openAtLogin: next.autoStart });
+        return settings;
+      });
+      settingsWrites = write.catch(() => {});
+      return write;
     });
     handle("network:get", () => ({
       addresses: addresses(),
       serverRunning: !!server,
       port: settings.port,
+      sessionCode:
+        settings.role === "TEACHER" ? server?.sessionCode : undefined,
     }));
     handle("network:discover", () => discover());
     handle("teacher:token", () =>
@@ -142,6 +205,7 @@ else {
       autoHideMenuBar: true,
       fullscreen: settings.fullscreen,
       webPreferences: {
+        backgroundThrottling: false,
         preload: path.join(__dirname, "preload.cjs"),
         nodeIntegration: false,
         contextIsolation: true,

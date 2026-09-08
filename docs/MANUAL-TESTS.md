@@ -6,7 +6,11 @@ Belum dijalankan pada hardware sekolah. Catat tanggal, versi Windows, versi apli
 - [ ] Pilih Teacher dan Student; tutup/buka aplikasi dan pastikan peran tersimpan.
 - [ ] Matikan akses internet sambil mempertahankan LAN. Pastikan discovery, audio, video dan request-to-speak tetap bekerja.
 - [ ] Uji Ethernet dan Wi-Fi tanpa AP/client isolation.
-- [ ] Uji mDNS dan fallback UDP; blok discovery sementara dan uji alamat manual.
+- [ ] Blok discovery sementara dan pastikan sambungan dua kode tetap bekerja langsung.
+- [ ] Jalankan dua ruang guru pada komputer berbeda di LAN yang sama. Pastikan kombinasi kode sesi A dengan kode jaringan B ditolak; kode yang sesuai menyambungkan ke guru yang dimaksud.
+- [ ] Coba kode kosong, salah, dan kode lama setelah guru kembali ke beranda/membuka ulang aplikasi. Pastikan tidak ada media yang tersambung.
+- [ ] Setelah ruang kelas tersambung, coba komputer ketiga dengan kode yang sama. Pastikan slot yang aktif tidak diambil alih.
+- [ ] Uji kode jaringan Ethernet dan Wi-Fi pada komputer dengan beberapa adapter; gunakan adapter yang dapat dijangkau ruang kelas.
 - [ ] Student awal MUTED, kamera tidak dibuka; guru terdengar dan terlihat.
 - [ ] Student meminta bicara, guru menerima, audio siswa terdengar.
 - [ ] Guru menolak: mikrofon siswa tetap tidak mengirim suara.
@@ -18,6 +22,12 @@ Belum dijalankan pada hardware sekolah. Catat tanggal, versi Windows, versi apli
 - [ ] Ganti perangkat selama sesi; pastikan replaceTrack menjaga koneksi.
 - [ ] Uji kamera gagal tetapi audio tetap bekerja; mikrofon gagal tetapi video tetap bekerja.
 - [ ] Tes volume input/output 0, 50, 100; mute, kamera, speaker dan F11.
+- [ ] Slider volume langsung di kelas berubah saat suara diputar; setelah relaunch nilainya tersimpan.
+- [ ] Tombol fullscreen pada kamera/tayangan berfungsi pada Teacher dan Student; Esc/tombol keluar mengembalikan tampilan.
+- [ ] Guru memulai Mode presentasi, memilih monitor, dan siswa melihat layar komputer. Suara mikrofon tetap terdengar.
+- [ ] Batalkan pemilihan monitor; kamera tetap tampil. Hentikan presentasi dan pastikan kembali ke kamera tanpa memutus audio.
+- [ ] Uji dua monitor, layar dicabut saat presentasi, dan perubahan perangkat saat layar dibagikan.
+- [ ] Kembali ke beranda menghentikan media/server sesuai peran, lalu pilih peran berbeda dan hubungkan kembali.
 - [ ] Coba izin Windows ditolak: pesan dapat dipahami, tidak crash.
 - [ ] Buka aplikasi kedua: fokus ke instance yang ada, tidak menyalakan server kedua.
 - [ ] Uji startup Windows dan fullscreen pada aplikasi terpasang.

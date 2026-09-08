@@ -12,6 +12,24 @@ try {
   await expect(page.locator(".role-grid")).toBeVisible();
   await expect(page).toHaveTitle("Mutasel: Classroom Connector");
   await expect(page.getByRole("img", { name: "Logo Mutasel" })).toBeVisible();
+  await page.evaluate(async () => {
+    const settings = await window.classroom.getSettings();
+    await window.classroom.saveSettings({ ...settings, autoConnect: false });
+  });
+  await page.reload();
+  await page.getByRole("button", { name: /PERANGKAT GURU/ }).click();
+  await expect(page.getByTestId("session-code")).toHaveText(/^[A-F0-9]{12}$/);
+  const firstCode = await page.getByTestId("session-code").textContent();
+  await page.getByRole("button", { name: "Kembali ke beranda" }).click();
+  await page.getByRole("button", { name: /PERANGKAT GURU/ }).click();
+  await expect(page.getByTestId("session-code")).toHaveText(/^[A-F0-9]{12}$/);
+  expect(await page.getByTestId("session-code").textContent()).not.toBe(firstCode);
+  await page.getByRole("button", { name: "Kembali ke beranda" }).click();
+  await page.getByRole("button", { name: /PERANGKAT SISWA/ }).click();
+  await expect(page.getByLabel("Kode jaringan", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Kode unik sesi", { exact: true })).toHaveValue("");
+  await page.screenshot({ path: "docs/previews/student-pairing.png" });
+  console.log("Session codes: teacher regeneration and student manual form passed");
   console.log(
     "Packaged EXE:",
     await page.evaluate(() => window.classroom.getAppInfo()),

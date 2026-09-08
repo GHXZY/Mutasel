@@ -3,6 +3,7 @@ import {
   settingsSchema,
   type Bridge,
 } from "../../../../packages/shared/protocol";
+import { version } from "../../../../package.json";
 // Browser preview supports UI only. LAN discovery and Teacher authentication require Electron.
 export const desktop = !!window.classroom;
 export const bridge: Bridge = window.classroom ?? {
@@ -30,5 +31,5 @@ export const bridge: Bridge = window.classroom ?? {
     if (document.fullscreenElement) await document.exitFullscreen();
     else await document.documentElement.requestFullscreen();
   },
-  getAppInfo: async () => ({ version: "1.0.0", build: "preview" }),
+  getAppInfo: async () => ({ version, build: "preview" }),
 };

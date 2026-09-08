@@ -42,7 +42,7 @@ npm run dist
 npm run package
 ```
 
-Output NSIS: `release/Mutasel-Classroom-Connector-Setup-1.0.0.exe`.
+Output NSIS: `release/Mutasel-Classroom-Connector-Setup-1.2.0.exe`.
 Executable hasil packaging: `release/win-unpacked/Mutasel Classroom Connector.exe` (folder pendukung harus ikut disalin jika menjalankan versi unpacked).
 
 Installer berisi Electron, renderer, server, discovery dan aset. Komputer sekolah tidak perlu Node.js, npm, Python, atau internet. Build pertama membutuhkan internet untuk dependency dan tool NSIS. Installer belum ditandatangani dengan sertifikat penerbit; Windows dapat menampilkan peringatan penerbit tidak dikenal.
@@ -60,12 +60,27 @@ Nama tampilan produk adalah **Mutasel: Classroom Connector**. Nama EXE dan short
 ## Instalasi komputer siswa
 
 1. Pasang installer yang sama, pilih **Ruang siswa**.
-2. Aplikasi mencari guru via mDNS, kemudian respons discovery UDP. Mikrofon siswa tidak mengirim suara sebelum disetujui.
-3. Jika tidak ditemukan, buka **Pengaturan → Jaringan**, isi alamat IPv4 privat komputer guru dan port yang sama, lalu simpan.
-4. Pilih speaker dan volume. Gunakan **Mode presentasi** atau **F11** untuk layar kelas.
+2. Minta **Kode jaringan** dan **Kode unik sesi** yang tampil di halaman Kelas komputer guru. Isi keduanya di formulir **Sambung dengan kode**.
+3. Tekan **Sambungkan dengan kode**. Kode salah atau sesi lama ditolak oleh server sebelum media tersambung. Mikrofon siswa tidak mengirim suara sebelum disetujui.
+4. Pilih speaker dan atur slider **Volume speaker** di panel kelas. Tombol fullscreen pada tayangan memperbesar video saja; klik lagi atau tekan Esc untuk keluar. **F11** memperbesar seluruh jendela aplikasi.
 5. Tekan **Minta izin berbicara**. Setelah disetujui, berbicara; tekan **Selesai berbicara** bila selesai.
 
 Peran dan perangkat tersimpan di `%APPDATA%/local-classroom/settings.json`. Ganti peran melalui **Pengaturan → Umum**. Opsi startup Windows berlaku pada versi terpasang. Tutup aplikasi untuk menghentikan server; tidak berjalan tersembunyi di tray.
+
+## Sambungan sesi pada versi 1.2
+
+Kode jaringan berformat `MS-XXXXXXXX-XXXX`, memuat IPv4 lokal dan port guru. Jika komputer guru memiliki beberapa adapter, gunakan kode jaringan yang sama-sama dapat dijangkau kedua perangkat. Kode unik terdiri dari 12 karakter heksadesimal acak, dibuat dengan generator kriptografis dan hanya disimpan di memori server. Kode ini tidak diumumkan melalui discovery atau endpoint status.
+
+Sesi baru dibuat ketika guru kembali ke beranda lalu memilih Ruang guru, membuka ulang aplikasi guru, atau mengubah port guru. Kode lama langsung tidak berlaku; masukkan kode terbaru untuk bergabung kembali. Gangguan LAN singkat tetap memakai kode sesi yang sama selama server guru masih berjalan. Komputer siswa tidak otomatis memilih guru pertama atau menyambung saat aplikasi dibuka. Pasang versi 1.2 pada kedua komputer.
+
+Beberapa pasangan ruang dapat menggunakan LAN yang sama; setiap sesi tetap memiliki satu guru dan satu ruang kelas. Perangkat tambahan tidak dapat mengambil alih slot yang sudah terisi. Kode sesi bertujuan mencegah salah sambung, bukan menggantikan keamanan jaringan.
+
+## Kontrol baru pada versi 1.1
+
+- **Kembali ke beranda** tersedia di atas layar kelas. Koneksi dan media dihentikan sebelum kembali ke pilihan Ruang guru/Ruang siswa. Pilih peran lagi untuk memulai; pengaturan perangkat dan volume tetap tersimpan.
+- **Fullscreen kamera/tayangan** memperbesar area video, dengan tombol keluar tetap dapat diklik. Pemutar audio tersembunyi tidak lagi menutupi kontrol.
+- **Mode presentasi** pada Teacher mengirim layar komputer menggantikan video kamera. Pilih monitor pada dialog; **Batal** tidak memulai pembagian layar. Tekan **Hentikan presentasi** untuk kembali ke kamera. Mikrofon guru tetap digunakan; audio sistem tidak ikut dibagikan. Siswa menerima tayangan melalui koneksi P2P yang sama. Tidak ada rekaman.
+- **Volume speaker** dapat digeser 0–100% langsung di kelas dan tersimpan ketika slider dilepas atau tombol keyboard selesai ditekan. Tombol mute tetap tersedia.
 
 ## LAN dan Firewall
 
@@ -78,7 +93,7 @@ Gunakan Ethernet jika tersedia. Dua komputer harus saling menjangkau pada LAN, t
 
 Di Windows Security → Firewall & network protection → Allow an app through firewall, izinkan **Mutasel Classroom Connector.exe** pada jaringan **Private** di kedua komputer. Disarankan rule berdasarkan program dengan cakupan subnet lokal; jangan menonaktifkan Firewall keseluruhan. Jika rule organisasi memblokir outbound, izinkan juga traffic lokal aplikasi. Tidak ada rule yang diubah otomatis oleh aplikasi.
 
-Alamat manual hanya menerima IPv4 loopback atau rentang RFC1918 (10/8, 172.16/12, 192.168/16). IPv6-only dan alamat publik bukan target versi ini. Sistem ditujukan untuk LAN sekolah terpercaya. Signaling lokal menggunakan ws tanpa TLS, dan Student menggunakan slot tunggal tanpa pairing secret; jaringan tidak terpercaya memerlukan rancangan autentikasi tambahan. Media WebRTC menggunakan enkripsi DTLS-SRTP bawaan.
+Kode jaringan hanya menerima IPv4 loopback atau rentang RFC1918 (10/8, 172.16/12, 192.168/16). IPv6-only dan alamat publik bukan target versi ini. Sistem ditujukan untuk LAN sekolah terpercaya. Signaling lokal menggunakan ws tanpa TLS; kode sesi tidak menggantikan keamanan jaringan. Media WebRTC menggunakan enkripsi DTLS-SRTP bawaan.
 
 ## Perangkat dan troubleshooting
 
