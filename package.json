@@ -1,0 +1,71 @@
+{
+  "name": "local-classroom",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Offline classroom communication over LAN",
+  "author": "Mutasel",
+  "main": "dist-electron/main.cjs",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "build": "tsc --noEmit && vite build && node scripts/build.mjs",
+    "start": "electron .",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "dist": "npm run build && electron-builder --win nsis --x64",
+    "package": "npm run dist",
+    "format": "prettier --write apps packages tests scripts *.ts *.json index.html",
+    "icons": "node scripts/create-icon.mjs"
+  },
+  "dependencies": {
+    "@fontsource/afacad": "^5.2.0",
+    "@fontsource/inter": "^5.2.0",
+    "bonjour-service": "^1.3.0",
+    "fastify": "^5.6.0",
+    "lucide-react": "^0.468.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "ws": "^8.18.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "@tailwindcss/vite": "^4.1.0",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@types/ws": "^8.18.0",
+    "@vitejs/plugin-react": "^4.7.0",
+    "electron": "^44.2.0",
+    "electron-builder": "^26.0.0",
+    "esbuild": "^0.25.0",
+    "prettier": "^3.9.6",
+    "tailwindcss": "^4.1.0",
+    "typescript": "^5.9.0",
+    "vite": "^6.3.0",
+    "vitest": "^3.2.0"
+  },
+  "build": {
+    "appId": "id.localclassroom.desktop",
+    "productName": "Mutasel: Classroom Connector",
+    "executableName": "Mutasel Classroom Connector",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.ico",
+      "signExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "Mutasel Classroom Connector",
+      "artifactName": "Mutasel-Classroom-Connector-Setup-${version}.${ext}"
+    }
+  }
+}
