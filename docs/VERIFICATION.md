@@ -1,5 +1,17 @@
 # Hasil verifikasi — 7 September 2026
 
+## Versi 1.2.1 — audio mikrofon siswa (10 September 2026)
+
+Build dan 7/7 uji server lulus. Skenario audio terarah lulus termasuk tiga siklus izin dan sambung ulang; skenario kelas lengkap juga lulus pada pengulangan. Pemantauan video terakhir berlangsung 60,103 detik, menghasilkan 1.198 frame, rata-rata 19,93 fps dan 0 dropped frame. Dua percobaan skenario kelas sebelumnya terhenti karena halaman Electron tertutup saat pemantauan; penyebab penutupan tersebut belum teridentifikasi, dan tidak terjadi pada pengulangan terakhir. Installer NSIS 1.2.1 selesai dibuat; smoke test EXE produksi memverifikasi startup, versi, nama, logo, dan pergantian kode sesi.
+
+Reproduksi sebelum perbaikan: setelah guru mengizinkan siswa berbicara, pemutar guru tidak muted dan tidak paused, tetapi stream tidak memiliki track audio. Student membuat transceiver sendiri sebelum menerima offer; sender mikrofon tidak terpasang pada m-line audio yang ditawarkan Teacher.
+
+Perbaikan: Student memasang remote description terlebih dahulu, mengambil transceiver audio yang ditawarkan guru, lalu memasang track mikrofon ke sender tersebut sebelum membuat answer. Teacher tetap membuat offer. Perubahan izin juga memperbarui status mikrofon yang dikirim ke peer.
+
+Uji regresi `tests/e2e/student-audio.spec.ts` menggunakan WAV nada sintetis sebagai mikrofon, tanpa mengakses mikrofon pengguna dan tanpa flag pelonggaran autoplay. Penyaring ucapan hanya dinonaktifkan di test karena dapat menghapus nada konstan; pengaturan echo cancellation/noise suppression produksi tidak diubah. Uji memeriksa track audio live, amplitudo sinyal diterima lebih dari 0,001, pemutar tidak paused/muted saat diizinkan, waktu pemutaran bertambah, mute setelah pencabutan izin, izin berulang, dan sambung ulang.
+
+Tes ini memverifikasi jalur sinyal digital dan status pemutar. Bunyi fisik speaker, volume Windows, pilihan output audio, dan perangkat keras sekolah tetap perlu diperiksa pada dua komputer nyata.
+
 ## Versi 1.2.0 — sambungan dua kode (8 September 2026)
 
 Build TypeScript/Vite/Electron dan installer NSIS v1.2.0 berhasil. Smoke test EXE produksi lulus: nama/logo, versi 1.2.0, kode guru berubah setelah kembali ke beranda dan memulai ruang guru lagi, serta formulir siswa kosong dan siap untuk kode baru. Pemeriksaan layout tidak menemukan overflow horizontal pada 1280×720, 1366×768, dan 1920×1080.

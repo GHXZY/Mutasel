@@ -343,11 +343,28 @@ export class Classroom {
       case "PERMISSION":
         this.emit({ permission: message.state });
         this.applyMute();
+        this.publishMedia();
         this.log(`Izin bicara: ${message.state}`);
         break;
       case "OFFER": {
         const pc = this.createPeer();
         await pc.setRemoteDescription({ type: "offer", sdp: message.sdp });
+        // The answerer must use the offered audio m-line. Pre-creating its own
+        // transceiver leaves the microphone sender outside the negotiated offer.
+        const audio = pc
+          .getTransceivers()
+          .find((t) => t.receiver.track.kind === "audio");
+        if (!audio) throw new Error("Teacher offer has no audio channel");
+        audio.direction = "sendrecv";
+        this.audioSender = audio.sender;
+        this.audioSender.setStreams(this.devices.stream);
+        await this.audioSender.replaceTrack(
+          this.devices.stream.getAudioTracks()[0] ?? null,
+        );
+        const video = pc
+          .getTransceivers()
+          .find((t) => t.receiver.track.kind === "video");
+        if (video) video.direction = "recvonly";
         await this.flushCandidates(pc);
         await pc.setLocalDescription(await pc.createAnswer());
         this.send({ type: "ANSWER", sdp: pc.localDescription!.sdp });
@@ -392,19 +409,21 @@ export class Classroom {
     this.emit({ remote });
     const audio = this.devices.stream.getAudioTracks()[0];
     const video = (this.display ?? this.devices.stream).getVideoTracks()[0];
-    const transceiver = pc.addTransceiver(audio ?? "audio", {
-      direction: "sendrecv",
-      streams: [this.devices.stream],
-    });
-    this.audioSender = transceiver.sender;
-    const codecs = RTCRtpReceiver.getCapabilities("audio")?.codecs.filter(
-      (c) => c.mimeType.toLowerCase() === "audio/opus",
-    );
-    if (codecs?.length) transceiver.setCodecPreferences(codecs);
-    this.videoSender = pc.addTransceiver(video ?? "video", {
-      direction: this.role === "TEACHER" ? "sendonly" : "recvonly",
-      streams: [this.devices.stream],
-    }).sender;
+    if (this.role === "TEACHER") {
+      const transceiver = pc.addTransceiver(audio ?? "audio", {
+        direction: "sendrecv",
+        streams: [this.devices.stream],
+      });
+      this.audioSender = transceiver.sender;
+      const codecs = RTCRtpReceiver.getCapabilities("audio")?.codecs.filter(
+        (c) => c.mimeType.toLowerCase() === "audio/opus",
+      );
+      if (codecs?.length) transceiver.setCodecPreferences(codecs);
+      this.videoSender = pc.addTransceiver(video ?? "video", {
+        direction: this.role === "TEACHER" ? "sendonly" : "recvonly",
+        streams: [this.devices.stream],
+      }).sender;
+    }
     pc.ontrack = (event) => {
       remote.addTrack(event.track);
       this.emit({ remote: new MediaStream(remote.getTracks()) });

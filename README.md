@@ -21,7 +21,7 @@
 
 Aplikasi berjalan melalui **jaringan lokal sekolah**. Setelah terpasang, Mutasel tidak memerlukan akun, langganan layanan cloud, atau koneksi internet untuk menjalankan sesi. Kedua komputer tetap harus terhubung ke LAN atau Wi-Fi yang saling dapat dijangkau.
 
-**Versi saat ini: 1.2.0.** Setiap sesi menghubungkan **satu komputer guru dan satu komputer ruang kelas**. Beberapa pasangan ruang dapat memakai jaringan yang sama, dengan kode sesi masing-masing. Satu sesi belum mendukung banyak komputer siswa sekaligus.
+**Versi saat ini: 1.2.1.** Setiap sesi menghubungkan **satu komputer guru dan satu komputer ruang kelas**. Beberapa pasangan ruang dapat memakai jaringan yang sama, dengan kode sesi masing-masing. Satu sesi belum mendukung banyak komputer siswa sekaligus.
 
 ![Tampilan ruang kelas dan formulir sambungan dua kode](docs/previews/student-pairing.png)
 
@@ -86,7 +86,7 @@ Installer sudah membawa komponen aplikasi. Komputer pengguna **tidak perlu memas
 ## Instalasi
 
 1. Buka halaman [Releases](https://github.com/GHXZY/Mutasel/releases) dan cari installer versi yang akan digunakan.
-2. Untuk versi 1.2.0, nama berkasnya adalah **`Mutasel-Classroom-Connector-Setup-1.2.0.exe`**.
+2. Untuk versi 1.2.1, nama berkasnya adalah **`Mutasel-Classroom-Connector-Setup-1.2.1.exe`**.
 3. Jalankan installer pada komputer guru dan komputer ruang kelas, lalu ikuti petunjuk pemilihan lokasi instalasi.
 4. Buka **Mutasel Classroom Connector** dari shortcut Windows.
 5. Jika Windows meminta izin jaringan, izinkan aplikasi pada jaringan **Private** sekolah yang dipercaya.
@@ -146,21 +146,21 @@ Untuk memperbarui aplikasi, tutup Mutasel lalu jalankan installer versi baru di 
 
 Mulai dengan memastikan **versi aplikasi sama**, guru masih membuka sesi yang dimaksud, dan kedua kode disalin dari tampilan guru terbaru.
 
-| Kendala                                                   | Langkah pemeriksaan                                                                                                                                                                 |
-| --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Kode tidak cocok / kode lama ditolak**                  | Salin ulang kedua kode. Jika guru baru membuka ulang aplikasi, kembali ke beranda, atau mengganti port, gunakan kode unik baru.                                                     |
-| **Kode jaringan tidak muncul**                            | Periksa sambungan LAN/Wi-Fi guru. Aplikasi membutuhkan alamat IPv4 lokal. Jika koneksi jaringan baru berubah, kembali ke beranda lalu buka ruang guru agar informasinya diperbarui. |
-| **Terus menghubungkan atau gagal tersambung**             | Pastikan kode jaringan berasal dari adapter yang dapat dijangkau ruang kelas. Periksa LAN, izin Firewall, jaringan tamu, dan isolasi klien Wi-Fi.                                   |
-| **Perangkat sudah terhubung / slot terisi**               | Satu sesi hanya menerima satu komputer ruang kelas. Putuskan sambungan ruang kelas sebelumnya sebelum menggantinya.                                                                 |
-| **Status jaringan aktif tetapi video/suara tidak muncul** | Buka **Diagnostik** dan periksa status WebRTC. Minta pengelola jaringan memeriksa lalu lintas UDP media; membuka port penghubung saja belum cukup.                                  |
-| **Kamera atau mikrofon tidak tersedia**                   | Periksa izin privasi Windows, sambungan USB, dan pilihan perangkat. Tutup aplikasi lain yang sedang memakai perangkat, lalu pilih ulang melalui Pengaturan.                         |
-| **Suara guru tidak terdengar**                            | Periksa mute dan volume mikrofon guru, volume speaker ruang kelas, perangkat keluaran Windows, serta **Tes speaker** di Pengaturan.                                                 |
-| **Suara siswa tidak terdengar**                           | Pastikan guru sudah mengizinkan siswa berbicara. Periksa mikrofon siswa dan speaker guru. Setelah koneksi terputus, siswa perlu meminta izin lagi.                                  |
-| **Suara bergema atau terlambat**                          | Jauhkan mikrofon dari speaker atau gunakan headset. Coba perangkat audio kabel jika Bluetooth menambah keterlambatan.                                                               |
-| **Video tersendat**                                       | Coba Ethernet, kurangi lalu lintas jaringan lain, dan tutup aplikasi berat. Lihat informasi koneksi di Diagnostik.                                                                  |
-| **Presentasi tidak mengirim suara video komputer**        | Presentasi saat ini mengirim gambar layar dan suara mikrofon guru. Audio sistem belum didukung.                                                                                     |
-| **Jaringan sempat terputus**                              | Pulihkan LAN/Wi-Fi dan tunggu upaya sambung ulang. Jika sesi guru sudah diganti, masukkan kode terbaru lalu sambungkan kembali.                                                     |
-| **Port guru sedang digunakan**                            | Ubah port melalui **Pengaturan → Jaringan** pada komputer guru. Setelah disimpan, bagikan kedua kode baru; ruang kelas tidak perlu mengisi port secara terpisah.                    |
+| Kendala                                                   | Langkah pemeriksaan                                                                                                                                                                                      |
+| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Kode tidak cocok / kode lama ditolak**                  | Salin ulang kedua kode. Jika guru baru membuka ulang aplikasi, kembali ke beranda, atau mengganti port, gunakan kode unik baru.                                                                          |
+| **Kode jaringan tidak muncul**                            | Periksa sambungan LAN/Wi-Fi guru. Aplikasi membutuhkan alamat IPv4 lokal. Jika koneksi jaringan baru berubah, kembali ke beranda lalu buka ruang guru agar informasinya diperbarui.                      |
+| **Terus menghubungkan atau gagal tersambung**             | Pastikan kode jaringan berasal dari adapter yang dapat dijangkau ruang kelas. Periksa LAN, izin Firewall, jaringan tamu, dan isolasi klien Wi-Fi.                                                        |
+| **Perangkat sudah terhubung / slot terisi**               | Satu sesi hanya menerima satu komputer ruang kelas. Putuskan sambungan ruang kelas sebelumnya sebelum menggantinya.                                                                                      |
+| **Status jaringan aktif tetapi video/suara tidak muncul** | Buka **Diagnostik** dan periksa status WebRTC. Minta pengelola jaringan memeriksa lalu lintas UDP media; membuka port penghubung saja belum cukup.                                                       |
+| **Kamera atau mikrofon tidak tersedia**                   | Periksa izin privasi Windows, sambungan USB, dan pilihan perangkat. Tutup aplikasi lain yang sedang memakai perangkat, lalu pilih ulang melalui Pengaturan.                                              |
+| **Suara guru tidak terdengar**                            | Periksa mute dan volume mikrofon guru, volume speaker ruang kelas, perangkat keluaran Windows, serta **Tes speaker** di Pengaturan.                                                                      |
+| **Suara siswa tidak terdengar**                           | Pasang versi 1.2.1 atau lebih baru di kedua komputer. Pastikan guru sudah mengizinkan siswa berbicara. Periksa mikrofon siswa dan speaker guru. Setelah koneksi terputus, siswa perlu meminta izin lagi. |
+| **Suara bergema atau terlambat**                          | Jauhkan mikrofon dari speaker atau gunakan headset. Coba perangkat audio kabel jika Bluetooth menambah keterlambatan.                                                                                    |
+| **Video tersendat**                                       | Coba Ethernet, kurangi lalu lintas jaringan lain, dan tutup aplikasi berat. Lihat informasi koneksi di Diagnostik.                                                                                       |
+| **Presentasi tidak mengirim suara video komputer**        | Presentasi saat ini mengirim gambar layar dan suara mikrofon guru. Audio sistem belum didukung.                                                                                                          |
+| **Jaringan sempat terputus**                              | Pulihkan LAN/Wi-Fi dan tunggu upaya sambung ulang. Jika sesi guru sudah diganti, masukkan kode terbaru lalu sambungkan kembali.                                                                          |
+| **Port guru sedang digunakan**                            | Ubah port melalui **Pengaturan → Jaringan** pada komputer guru. Setelah disimpan, bagikan kedua kode baru; ruang kelas tidak perlu mengisi port secara terpisah.                                         |
 
 ### Pengaturan jaringan untuk pengelola TI
 
@@ -219,11 +219,11 @@ Preview di browser hanya untuk tampilan. Gunakan aplikasi Electron untuk server 
 npm run dist
 ```
 
-Hasil versi 1.2.0:
+Hasil versi 1.2.1:
 
 ```text
 release/
-├── Mutasel-Classroom-Connector-Setup-1.2.0.exe
+├── Mutasel-Classroom-Connector-Setup-1.2.1.exe
 └── win-unpacked/
     └── Mutasel Classroom Connector.exe
 ```
@@ -259,6 +259,10 @@ Setelah membuat installer, periksa aplikasi hasil paket:
 ```powershell
 node scripts/packaged-smoke.mjs
 ```
+
+## Perbaikan versi 1.2.1
+
+Memperbaiki negosiasi audio WebRTC agar mikrofon siswa terkirim ke komputer guru setelah izin berbicara diberikan. Pengujian regresi memeriksa track audio, sinyal suara yang diterima, pemutaran aktif, izin berulang, dan sambung ulang menggunakan mikrofon simulasi. Pasang versi terbaru pada kedua komputer.
 
 ## Status pengujian dan dokumentasi
 

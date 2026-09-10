@@ -28,7 +28,7 @@ async function launch(name: string) {
     path.join(dir, "settings.json"),
     JSON.stringify({ theme: "light", port: 48910 }),
   );
-  return electron.launch({
+  const application = await electron.launch({
     args: [
       ".",
       "--use-fake-device-for-media-stream",
@@ -37,6 +37,8 @@ async function launch(name: string) {
     ],
     env: { ...process.env, CLASSROOM_TEST_DATA: dir },
   });
+  await (await application.firstWindow()).waitForLoadState("load");
+  return application;
 }
 test("roles, real P2P media, speaking permission, rejection, reconnect and settings", async () => {
   test.setTimeout(180000);
